@@ -11,19 +11,32 @@ import {
 } from "@/components/ui/select";
 import { SummaryStats } from "@/components/summary-stats";
 import { StockTable } from "@/components/stock-table";
-import { AddStockModal } from "@/components/add-stock-modal";
+import { StockEditModal } from "@/components/stock-edit-modal";
+import { ThesisDrawer } from "@/components/thesis-drawer";
+import { MacroBanner } from "@/components/macro-banner";
+import { MacroEditModal } from "@/components/macro-edit-modal";
+import { ViewToggle, type ViewMode } from "@/components/view-toggle";
 import { RefreshCw, Plus } from "lucide-react";
 import { toast } from "sonner";
-import type { Stock } from "@/lib/db";
+import type { StockWithDetails, MacroRegime } from "@/lib/db";
 
 export default function Dashboard() {
-  const [stocks, setStocks] = useState<Stock[]>([]);
+  const [stocks, setStocks] = useState<StockWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingStock, setEditingStock] = useState<Stock | null>(null);
+  const [editingStock, setEditingStock] = useState<StockWithDetails | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sectorFilter, setSectorFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<ViewMode>("valuation");
+
+  // Thesis drawer
+  const [drawerStock, setDrawerStock] = useState<StockWithDetails | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Macro
+  const [macro, setMacro] = useState<MacroRegime | null>(null);
+  const [macroEditOpen, setMacroEditOpen] = useState(false);
 
   const fetchStocks = useCallback(async () => {
     try {
@@ -38,9 +51,22 @@ export default function Dashboard() {
     }
   }, []);
 
+  const fetchMacro = useCallback(async () => {
+    try {
+      const res = await fetch("/api/macro");
+      if (res.ok) {
+        const data = await res.json();
+        setMacro(data);
+      }
+    } catch {
+      // silently fail for macro
+    }
+  }, []);
+
   useEffect(() => {
     fetchStocks();
-  }, [fetchStocks]);
+    fetchMacro();
+  }, [fetchStocks, fetchMacro]);
 
   const handleRefreshPrices = async () => {
     setRefreshing(true);
@@ -71,7 +97,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleEdit = (stock: Stock) => {
+  const handleEdit = (stock: StockWithDetails) => {
     setEditingStock(stock);
     setModalOpen(true);
   };
@@ -79,6 +105,24 @@ export default function Dashboard() {
   const handleModalClose = (open: boolean) => {
     setModalOpen(open);
     if (!open) setEditingStock(null);
+  };
+
+  const handleRowClick = (stock: StockWithDetails) => {
+    setDrawerStock(stock);
+    setDrawerOpen(true);
+  };
+
+  const handleFetchFundamentals = async (stock: StockWithDetails) => {
+    toast.info(`Fetching fundamentals for ${stock.ticker}...`);
+    try {
+      const res = await fetch(`/api/stocks/${stock.id}/fetch-fundamentals`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(data.message);
+      await fetchStocks();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to fetch fundamentals");
+    }
   };
 
   const sectors = Array.from(
@@ -107,7 +151,7 @@ export default function Dashboard() {
               BuyZone
             </h1>
             <p className="text-sm text-muted-foreground">
-              Stocks you like, waiting for the right price.
+              Personal Investment OS
             </p>
           </div>
           <div className="flex gap-2">
@@ -128,14 +172,20 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Macro Banner */}
+        <div className="mb-4">
+          <MacroBanner macro={macro} onEdit={() => setMacroEditOpen(true)} />
+        </div>
+
         {/* Summary Stats */}
         <div className="mb-6">
           <SummaryStats stocks={stocks} />
         </div>
 
-        {/* Filters */}
+        {/* Filters + View Toggle */}
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3 items-center">
+            <ViewToggle value={viewMode} onChange={setViewMode} />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="Filter by status" />
@@ -143,8 +193,9 @@ export default function Dashboard() {
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="buy_zone">Buy Zone</SelectItem>
-                <SelectItem value="approaching">Approaching</SelectItem>
-                <SelectItem value="overvalued">Overvalued</SelectItem>
+                <SelectItem value="watch_zone">Watch Zone</SelectItem>
+                <SelectItem value="extended">Extended</SelectItem>
+                <SelectItem value="avoid">Avoid</SelectItem>
               </SelectContent>
             </Select>
             {sectors.length > 0 && (
@@ -181,16 +232,41 @@ export default function Dashboard() {
             stocks={filteredStocks}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onRowClick={handleRowClick}
+            viewMode={viewMode}
           />
         )}
       </div>
 
       {/* Add/Edit Modal */}
-      <AddStockModal
+      <StockEditModal
         open={modalOpen}
         onOpenChange={handleModalClose}
         onSave={fetchStocks}
         editingStock={editingStock}
+      />
+
+      {/* Thesis Drawer */}
+      <ThesisDrawer
+        stock={drawerStock}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        onEdit={(stock) => {
+          setDrawerOpen(false);
+          handleEdit(stock);
+        }}
+        onDelete={handleDelete}
+        onFetchFundamentals={handleFetchFundamentals}
+      />
+
+      {/* Macro Edit Modal */}
+      <MacroEditModal
+        open={macroEditOpen}
+        onOpenChange={setMacroEditOpen}
+        macro={macro}
+        onSave={() => {
+          fetchMacro();
+        }}
       />
     </div>
   );

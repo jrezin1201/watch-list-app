@@ -9,9 +9,10 @@ interface SummaryStatsProps {
 
 export function SummaryStats({ stocks }: SummaryStatsProps) {
   const total = stocks.length;
-  const overvalued = stocks.filter((s) => s.status === "overvalued").length;
-  const approaching = stocks.filter((s) => s.status === "approaching").length;
+  const extended = stocks.filter((s) => s.status === "extended").length;
+  const watchZone = stocks.filter((s) => s.status === "watch_zone").length;
   const buyZone = stocks.filter((s) => s.status === "buy_zone").length;
+  const avoid = stocks.filter((s) => s.status === "avoid").length;
 
   const avgPctAbove =
     total > 0
@@ -23,14 +24,15 @@ export function SummaryStats({ stocks }: SummaryStatsProps) {
             100;
           return acc + pct;
         }, 0) /
-        stocks.filter((s) => s.current_price !== null).length
+        (stocks.filter((s) => s.current_price !== null).length || 1)
       : 0;
 
   const stats = [
     { label: "Total Tracked", value: total, color: "text-foreground" },
-    { label: "Overvalued", value: overvalued, color: "text-red-400" },
-    { label: "Approaching", value: approaching, color: "text-yellow-400" },
+    { label: "Extended", value: extended, color: "text-red-400" },
+    { label: "Watch Zone", value: watchZone, color: "text-yellow-400" },
     { label: "Buy Zone", value: buyZone, color: "text-green-400" },
+    { label: "Avoid", value: avoid, color: "text-zinc-400" },
     {
       label: "Avg % Above Target",
       value: isNaN(avgPctAbove) ? "N/A" : `${avgPctAbove.toFixed(1)}%`,
@@ -39,7 +41,7 @@ export function SummaryStats({ stocks }: SummaryStatsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
       {stats.map((stat) => (
         <Card key={stat.label} className="bg-card/50 border-border/50">
           <CardContent className="p-4">
