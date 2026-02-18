@@ -22,8 +22,31 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Zap, Calculator, PenLine } from "lucide-react";
 import type { StockWithDetails, StockTag, TriggerAlert } from "@/lib/db";
+
+// Data source indicator badges
+function SourceTag({ type }: { type: "manual" | "api" | "computed" }) {
+  if (type === "api") {
+    return (
+      <span className="ml-1.5 inline-flex items-center gap-0.5 rounded bg-blue-500/15 px-1 py-0.5 text-[10px] font-medium text-blue-400">
+        <Zap className="h-2.5 w-2.5" />API
+      </span>
+    );
+  }
+  if (type === "computed") {
+    return (
+      <span className="ml-1.5 inline-flex items-center gap-0.5 rounded bg-purple-500/15 px-1 py-0.5 text-[10px] font-medium text-purple-400">
+        <Calculator className="h-2.5 w-2.5" />Auto
+      </span>
+    );
+  }
+  return (
+    <span className="ml-1.5 inline-flex items-center gap-0.5 rounded bg-zinc-500/15 px-1 py-0.5 text-[10px] font-medium text-zinc-400">
+      <PenLine className="h-2.5 w-2.5" />Manual
+    </span>
+  );
+}
 
 interface StockEditModalProps {
   open: boolean;
@@ -364,6 +387,15 @@ export function StockEditModal({
           <DialogTitle>
             {editingStock ? `Edit ${editingStock.ticker}` : "Add Stock to Watchlist"}
           </DialogTitle>
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <span className="text-xs text-muted-foreground">Data sources:</span>
+            <SourceTag type="manual" />
+            <span className="text-[10px] text-muted-foreground">You enter this</span>
+            <SourceTag type="api" />
+            <span className="text-[10px] text-muted-foreground">Pulled from Alpha Vantage</span>
+            <SourceTag type="computed" />
+            <span className="text-[10px] text-muted-foreground">Calculated for you</span>
+          </div>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <Tabs defaultValue="basics" className="w-full">
@@ -377,9 +409,12 @@ export function StockEditModal({
 
             {/* Tab 1: Basics */}
             <TabsContent value="basics" className="space-y-4">
+              <p className="text-xs text-muted-foreground italic">
+                Current Price, Status, Upside %, % Above Target, Asymmetry Ratio, and Dilution Risk are computed automatically — you won&apos;t see them here.
+              </p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="ticker">Ticker *</Label>
+                  <Label htmlFor="ticker">Ticker *<SourceTag type="manual" /></Label>
                   <Input
                     id="ticker"
                     placeholder="AAPL"
@@ -390,7 +425,7 @@ export function StockEditModal({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="sector">Sector</Label>
+                  <Label htmlFor="sector">Sector<SourceTag type="manual" /></Label>
                   <Input
                     id="sector"
                     placeholder="Technology"
@@ -400,7 +435,7 @@ export function StockEditModal({
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="company_name">Company Name *</Label>
+                <Label htmlFor="company_name">Company Name *<SourceTag type="manual" /></Label>
                 <Input
                   id="company_name"
                   placeholder="Apple Inc."
@@ -411,7 +446,7 @@ export function StockEditModal({
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="fair_value">Fair Value (Base) *</Label>
+                  <Label htmlFor="fair_value">Fair Value (Base) *<SourceTag type="manual" /></Label>
                   <Input
                     id="fair_value"
                     type="number"
@@ -423,7 +458,7 @@ export function StockEditModal({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="bear_case_fv">Bear Case FV</Label>
+                  <Label htmlFor="bear_case_fv">Bear Case FV<SourceTag type="manual" /></Label>
                   <Input
                     id="bear_case_fv"
                     type="number"
@@ -434,7 +469,7 @@ export function StockEditModal({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="bull_case_fv">Bull Case FV</Label>
+                  <Label htmlFor="bull_case_fv">Bull Case FV<SourceTag type="manual" /></Label>
                   <Input
                     id="bull_case_fv"
                     type="number"
@@ -447,7 +482,7 @@ export function StockEditModal({
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="buy_target">Buy Target *</Label>
+                  <Label htmlFor="buy_target">Buy Target *<SourceTag type="manual" /></Label>
                   <Input
                     id="buy_target"
                     type="number"
@@ -459,7 +494,7 @@ export function StockEditModal({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="peg_ratio">PEG Ratio</Label>
+                  <Label htmlFor="peg_ratio">PEG Ratio<SourceTag type="manual" /></Label>
                   <Input
                     id="peg_ratio"
                     type="number"
@@ -470,7 +505,7 @@ export function StockEditModal({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ps_ratio">P/S Ratio</Label>
+                  <Label htmlFor="ps_ratio">P/S Ratio<SourceTag type="api" /></Label>
                   <Input
                     id="ps_ratio"
                     type="number"
@@ -479,11 +514,12 @@ export function StockEditModal({
                     value={form.ps_ratio}
                     onChange={(e) => set("ps_ratio", e.target.value)}
                   />
+                  <p className="text-[10px] text-muted-foreground">Fetched via &quot;Fetch Fundamentals&quot; or enter manually</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="ps_ratio_5y_avg">P/S 5Y Avg</Label>
+                  <Label htmlFor="ps_ratio_5y_avg">P/S 5Y Avg<SourceTag type="manual" /></Label>
                   <Input
                     id="ps_ratio_5y_avg"
                     type="number"
@@ -498,7 +534,7 @@ export function StockEditModal({
                     checked={form.macro_gated}
                     onCheckedChange={(v) => set("macro_gated", v)}
                   />
-                  <Label htmlFor="macro_gated">Macro Gated (force Avoid status)</Label>
+                  <Label htmlFor="macro_gated">Macro Gated<SourceTag type="manual" /></Label>
                 </div>
               </div>
             </TabsContent>
@@ -507,20 +543,21 @@ export function StockEditModal({
             <TabsContent value="scores" className="space-y-4">
               <div className="grid grid-cols-3 gap-4 rounded-lg border border-border/50 p-3 mb-4">
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground">Execution</p>
+                  <p className="text-xs text-muted-foreground">Execution<SourceTag type="computed" /></p>
                   <p className="text-lg font-bold">{executionScore.toFixed(1)}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground">Balance Sheet</p>
+                  <p className="text-xs text-muted-foreground">Balance Sheet<SourceTag type="computed" /></p>
                   <p className="text-lg font-bold">{balanceSheetScore.toFixed(1)}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground">Growth Quality</p>
+                  <p className="text-xs text-muted-foreground">Growth Quality<SourceTag type="computed" /></p>
                   <p className="text-lg font-bold">{growthQualityScore.toFixed(1)}</p>
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground italic mb-2">All 10 sliders below are manual inputs. The 3 aggregate scores above are averaged automatically.</p>
 
-              <p className="text-xs text-muted-foreground font-medium">Execution (4 metrics)</p>
+              <p className="text-xs text-muted-foreground font-medium">Execution (4 metrics)<SourceTag type="manual" /></p>
               {renderSlider("Revenue Growth", form.revenue_growth, (v) => set("revenue_growth", v))}
               {renderSlider("FCF Margin", form.fcf_margin, (v) => set("fcf_margin", v))}
               {renderSlider("ROIC", form.roic, (v) => set("roic", v))}
@@ -600,7 +637,7 @@ export function StockEditModal({
             {/* Tab 4: Tags & Sizing */}
             <TabsContent value="tags" className="space-y-4">
               <div className="space-y-2">
-                <Label>Conviction (0-10): {form.conviction}</Label>
+                <Label>Conviction (0-10): {form.conviction}<SourceTag type="manual" /></Label>
                 <Slider
                   value={[form.conviction]}
                   onValueChange={(v) => set("conviction", v[0])}
@@ -682,16 +719,17 @@ export function StockEditModal({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Shares Outstanding (Current)</Label>
+                  <Label>Shares Outstanding (Current)<SourceTag type="api" /></Label>
                   <Input
                     type="number"
                     placeholder="1000000000"
                     value={form.shares_outstanding_current}
                     onChange={(e) => set("shares_outstanding_current", e.target.value)}
                   />
+                  <p className="text-[10px] text-muted-foreground">Fetched via &quot;Fetch Fundamentals&quot; or enter manually</p>
                 </div>
                 <div className="space-y-2">
-                  <Label>Shares Outstanding (Prior Year)</Label>
+                  <Label>Shares Outstanding (Prior Year)<SourceTag type="manual" /></Label>
                   <Input
                     type="number"
                     placeholder="980000000"
@@ -702,7 +740,7 @@ export function StockEditModal({
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>IV Percentile</Label>
+                  <Label>IV Percentile<SourceTag type="manual" /></Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -712,7 +750,7 @@ export function StockEditModal({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>CC Yield %</Label>
+                  <Label>CC Yield %<SourceTag type="manual" /></Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -722,7 +760,7 @@ export function StockEditModal({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>LEAP Score</Label>
+                  <Label>LEAP Score<SourceTag type="manual" /></Label>
                   <Input
                     type="number"
                     step="0.01"
